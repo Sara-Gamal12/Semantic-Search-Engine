@@ -57,3 +57,27 @@ def read_file_records(file_path):
         records.append((array, index))
 
     return records
+
+def read_file_records_mmap(file_path):
+    # Use np.memmap to memory-map the file (assuming float32 for the vector and int32 for the index)
+    # 70 floats (4 bytes each) + 1 integer (4 bytes) per record
+    record_size = 70 * 4 + 4  # 70 floats + 1 integer
+
+    # Memory-map the file
+    mmap_data = np.memmap(file_path, dtype=np.uint8, mode='r')
+
+    # Calculate the number of records in the file
+    num_records = len(mmap_data) // record_size
+
+    records = []
+    for i in range(num_records):
+        # Extract the binary chunk corresponding to one record
+        record = mmap_data[i * record_size:(i + 1) * record_size]
+
+        # Unpack the 70 floats (each of size 4 bytes) and the integer (4 bytes)
+        array = np.frombuffer(record[:70 * 4], dtype=np.float32)  # 70 floats
+        index = struct.unpack("i", record[70 * 4:])[0]  # 1 integer
+        
+        records.append((array, index))
+
+    return records
