@@ -1,0 +1,4 @@
+./clusters
+./.venv
+./.vscode
+./__pycache__
