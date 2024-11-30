@@ -7,20 +7,19 @@ def write_file_centroids(file_path,data):
             fout.write(binary_data)
 import struct
 
+          
 def read_file_centroids(file_path):
-    with open(file_path, "rb") as f:
-        binary_data = f.read()
-        
-    # Calculate the number of centroids based on the size of the file
-    # Assuming each centroid is represented by 70 floats (4 bytes each)
-    num_floats = len(binary_data) // (70 * 4)
-    
-    # Unpack the binary data
-    data = struct.unpack(f"{num_floats*70}f", binary_data)
-    
-    # Reshape the unpacked data into a 2D array of centroids (num_floats x 70)
-    centroids = [data[i:i+70] for i in range(0, len(data), 70)]
-    
+    # Calculate the size of each centroid (70 floats, each 4 bytes)
+    dtype = np.float32
+    centroid_size = 70
+
+    # Create a memory-mapped NumPy array
+    data = np.memmap(file_path, dtype=dtype, mode='r')
+
+    # Reshape the array to have rows of 70 floats (each row represents a centroid)
+    num_centroids = data.size // centroid_size
+    centroids = data[:num_centroids * centroid_size].reshape(num_centroids, centroid_size)
+
     return centroids
 
 
