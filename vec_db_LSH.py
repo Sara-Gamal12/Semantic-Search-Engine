@@ -9,7 +9,6 @@ import heapq
 import shutil
 import sys
 from sklearn.cluster import MiniBatchKMeans
-from joblib import parallel_backend
 
 DB_SEED_NUMBER = 42
 ELEMENT_SIZE = np.dtype(np.float32).itemsize
@@ -19,9 +18,8 @@ class VecDB:
     def __init__(self, database_file_path = "saved_db.dat", index_file_path = "index.dat", new_db = True, db_size = None) -> None:
         self.db_path = database_file_path
         self.index_path = index_file_path
+        self.file_path="./hash"
         self.no_centroids=0
-        self.file_path="./clusters"
-
         if new_db:
             if db_size is None:
                 raise ValueError("You need to provide the size of the database")
@@ -29,15 +27,6 @@ class VecDB:
             if os.path.exists(self.db_path):
                 os.remove(self.db_path)
             self.generate_database(db_size)
-        if self._get_num_records()==10**6:
-           self.file_path="./clusters1"
-        if self._get_num_records()==10*10**6:
-           self.file_path="./clusters2"
-        if self._get_num_records()==15*10**6:
-           self.file_path="./clusters3"
-        if self._get_num_records()==20*10**6:
-           self.file_path="./clusters4"
-
     
     def generate_database(self, size: int) -> None:
         rng = np.random.default_rng(DB_SEED_NUMBER)
@@ -102,29 +91,53 @@ class VecDB:
 
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
+        # scores = []
+        # num_records = self._get_num_records()
+        # # here we assume that the row number is the ID of each vector
+        # for row_num in range(num_records):
+        #     vector = self.get_one_row(row_num)
+        #     score = self._cal_score(query, vector)
+        #     scores.append((score, row_num))
+        # # here we assume that if two rows have the same score, return the lowest ID
+        # scores = sorted(scores, reverse=True)[:top_k]
+        # return [s[1] for s in scores]
+            norm_input_query = query / np.linalg.norm(query)
+            projections = np.dot(self.norm_random_vectors, norm_input_query.squeeze())
+            hash_value = ''.join(['1' if p > 0 else '0' for p in projections])
+            vectors=read_file_records_mmap(self.file_path + "/" + str(hash_value) + ".bin")
+            data = np.array([v[0] for v in vectors])  # Extract vector data
+            ids = np.array([v[1] for v in vectors])  # Extract vector IDs
 
-            k =10
-            top_centroids = self._get_top_centroids(query, k)
+            dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
 
-            # Initialize a list to store results
-            results = []
-            for centroid in top_centroids:
-                  ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
+            norms_data = np.linalg.norm(data, axis=1)  # Norms of the data vectors
+            scores = dot_products / (norms_data * np.linalg.norm(query))  # Cosine similarity for all
+            results=[]
+            # Append scores and IDs to a list
+            results.extend((score, vector_id) for score, vector_id in zip(scores, ids))
 
-                  data = np.array([self.get_one_row(id) for id in ids])
-                  # Compute cosine similarity for all vectors in the file
-                  dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
-                  norms_data = np.linalg.norm(data, axis=1)  # Norms of the data vectors
-                  norm_query = np.linalg.norm(query)  # Norm of the query vector
-                  scores = dot_products / (norms_data * norm_query)  # Cosine similarity for all
-                  # Append scores and IDs to a list
+            # Print sizes of key objects
+            # self.print_size("vectors", vectors)
+            # self.print_size("data", data)
+            # self.print_size("ids", ids)
+            # self.print_size("dot_products", dot_products)
+            # self.print_size("norms_data", norms_data)
+            # self.print_size("scores", scores)
+            # self.print_size("results", results)
 
-                  results.extend(zip(scores, ids))
-                  results.sort(reverse=True, key=lambda x: x[0])
-                  results = results[:top_k]
+            # Convert results to a list, sort, and slice
+            results = list(results)
+            results.sort(reverse=True, key=lambda x: x[0])
+            results=results[0:top_k]
             top_k_ids = [result[1] for result in results]
+
             return top_k_ids
 
+
+
+
+
+           
     
     def _cal_score(self, vec1, vec2):
         dot_product = np.dot(vec1, vec2)
@@ -134,45 +147,26 @@ class VecDB:
         return cosine_similarity
 
     def _build_index(self):
-      
-        self.no_centroids = int(np.sqrt(self._get_num_records()))
        
-        chuck_size = min(10**6,self._get_num_records())
-        training_data=self.get_all_rows()[0:chuck_size]   
-        kmeans = MiniBatchKMeans(n_clusters=self.no_centroids, random_state=0, batch_size=10**4)
-
-        # Fit the model
-        kmeans.fit(training_data)
-        
-        
-        labels=kmeans.predict(self.get_all_rows())
-        centroids= kmeans.cluster_centers_
-        #save centroids in file
+        num_random_vectors = 8
+        vector_size = 70
         if os.path.exists(self.file_path):
             shutil.rmtree(self.file_path)
         os.makedirs(self.file_path, exist_ok=True)
        
-        write_file_centroids(self.file_path+"/centroids.bin",centroids)
-    
-        unique_labels = np.unique(labels)
-        for label in tqdm.tqdm(unique_labels):
-            indices = np.where(labels == label)[0]
-            for  index in indices:
-                write_file_records(self.file_path + "/" + str(label) + ".bin",  index)
-            
-            
+        # Step 1: Generate 8 random vectors of size 70
+        rng = np.random.default_rng(DB_SEED_NUMBER)  # Use optional seed for reproducibility
+        random_vectors = rng.random((num_random_vectors, vector_size), dtype=np.float32) * 2 - 1
+        self.norm_random_vectors = random_vectors / np.linalg.norm(random_vectors, axis=0)
 
-            
-            
-    def _get_top_centroids(self, query, k):
-            # find the nearest centroids to the query
-            centroids = read_file_centroids(self.file_path+"/centroids.bin")
-            heap = []
-            for i, centroid in enumerate(centroids):
-                score = self._cal_score(query, centroid)
-                heapq.heappush(heap, (score, i))
-            top_centroids = heapq.nlargest(k, heap)
-            return top_centroids
-
-
+        # Step 2: Compute hash values for each data point
+        all_rows=self.get_all_rows()
+        for i, point in enumerate(all_rows):
+            # Compute dot products with random vectors
+            norm_input_vector = point / np.linalg.norm(point)
+            projections = np.dot(self.norm_random_vectors, norm_input_vector.squeeze())
+            # Convert to binary hash: 1 if dot product > 0, else 0
+            hash_value = ''.join(['1' if p > 0 else '0' for p in projections])
+            print(hash_value)
+            write_file_records(self.file_path + "/" + str(hash_value) + ".bin", (point, i))
 

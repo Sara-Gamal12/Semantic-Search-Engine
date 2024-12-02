@@ -24,12 +24,8 @@ def read_file_centroids(file_path):
 
 
 def write_file_records(file_path, data):
-    # Assume data is a tuple (array_of_floats, index)
-    array, index = data
     
-    # Flatten the array and combine it with the index
-    # Pack the 70 floats from the array and the integer index into binary
-    binary_data = struct.pack(f"{70}f", *array) + struct.pack("i", index)
+    binary_data = struct.pack("i", data)
     
     # Write the packed data to the file in append mode
     with open(file_path, "ab") as fout:
@@ -40,7 +36,7 @@ def read_file_records(file_path):
         binary_data = f.read()
 
     # Calculate the number of records (each record is 70 floats + 1 integer index)
-    record_size = 70 * 4 + 4  # 70 floats (4 bytes each) + 1 integer (4 bytes)
+    record_size =  4 
     num_records = len(binary_data) // record_size
 
     # Unpack the data
@@ -50,18 +46,15 @@ def read_file_records(file_path):
         record = binary_data[i*record_size:(i+1)*record_size]
         
         # Unpack the 70 floats and the integer index
-        array = struct.unpack(f"{70}f", record[:70*4])  # 70 floats
-        index = struct.unpack("i", record[70*4:])[0]  # 1 integer
+        index = struct.unpack("i", record)[0]  # 1 integer
         
-        records.append((array, index))
+        records.append( index)
 
     return records
 
 def read_file_records_mmap(file_path):
-    # Use np.memmap to memory-map the file (assuming float32 for the vector and int32 for the index)
-    # 70 floats (4 bytes each) + 1 integer (4 bytes) per record
-    record_size = 70 * 4 + 4  # 70 floats + 1 integer
-
+   
+    record_size =  4 
     # Memory-map the file
     mmap_data = np.memmap(file_path, dtype=np.uint8, mode='r')
 
@@ -73,10 +66,8 @@ def read_file_records_mmap(file_path):
         # Extract the binary chunk corresponding to one record
         record = mmap_data[i * record_size:(i + 1) * record_size]
 
-        # Unpack the 70 floats (each of size 4 bytes) and the integer (4 bytes)
-        array = np.frombuffer(record[:70 * 4], dtype=np.float32)  # 70 floats
-        index = struct.unpack("i", record[70 * 4:])[0]  # 1 integer
+        index = struct.unpack("i", record)[0]  # 1 integer
         
-        records.append((array, index))
+        records.append( index)
 
     return records
