@@ -178,7 +178,8 @@ class VecDB:
         sorted=[]
         offsets={}
         sizes={}
-        for label in kmeans.labels_:
+        max_label=max(kmeans.labels_)
+        for label in range(max_label+1):
             offsets[label]=0    
             sizes[label]=0
         for label in tqdm.tqdm(unique_labels):
@@ -202,8 +203,7 @@ class VecDB:
               
             
             sizes[label]=size
-            if label==2820:
-              print(sizes[label])
+           
        
         
 

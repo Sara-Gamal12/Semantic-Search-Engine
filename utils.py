@@ -21,6 +21,8 @@ def write_file_centroids(file_path,centroids,offsets,sizes):
               if(i in sizes):
                   binary_data = struct.pack(f"q",offsets[i])+struct.pack(f"q", sizes[i])+struct.pack(f"{70}f" ,*centroid.flatten())
                   fout.write(binary_data)
+              else:
+                  print(i)
    
 import struct
 
