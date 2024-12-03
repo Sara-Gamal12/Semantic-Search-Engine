@@ -1,26 +1,50 @@
 import struct
 import numpy as np
-def write_file_centroids(file_path,data):
+import os
+ELEMENT_SIZE = np.dtype(np.float32).itemsize
+
+          # Assume data is a tuple (array_of_floats, index)
+      
+def write_file_centroids(file_path,centroids,offsets,sizes):
+  
+    try:
         with open(file_path, "ab") as fout:
-            # Pack the entire array into binary data
-            binary_data = struct.pack(len(data)*f"{70}f", *data.flatten())
-            fout.write(binary_data)
+            # Loop over each centroid and write its data along with the offset
+            for i, centroid in enumerate(centroids):
+                if i>=2819:
+                  print(i)
+                  print(centroid)
+                  print(sizes[i])
+                  print(offsets[i])
+                 
+                # Pack the offset as a 4-byte integer and the centroid vector as 70 floats
+                if(sizes[i]!=0):
+                  binary_data = struct.pack(f"q",offsets[i])+struct.pack(f"q", sizes[i])+struct.pack(f"{70}f" ,*centroid.flatten())
+                  fout.write(binary_data)
+    except Exception as e:
+        print(f"An error occurred while writing centroids to the file: {e}")
 import struct
 
           
 def read_file_centroids(file_path):
-    # Calculate the size of each centroid (70 floats, each 4 bytes)
-    dtype = np.float32
-    centroid_size = 70
+  
+        with open(file_path, "rb") as f:
+            binary_data = f.read()
+        
+        # Each centroid includes an offset (4 bytes), size (4 bytes), and 70 floats (4 bytes each).
+        
+        # Unpack the binary data: offset (int), size (int), centroid (70 floats)
+        centroids = []
+        idx = 0
+        while idx < len(binary_data):
+            offset = struct.unpack_from("q", binary_data, idx)[0]  # Read 4 bytes for offset
+            size = struct.unpack_from("q", binary_data, idx + 8)[0]  # Read 4 bytes for size
+            centroid = struct.unpack_from(f"{70}f", binary_data, idx + 16)  # Read 280 bytes for centroid
+            centroids.append((offset, size, centroid))
+            idx +=16+ 280  # Move the index forward by the size of one entry
 
-    # Create a memory-mapped NumPy array
-    data = np.memmap(file_path, dtype=dtype, mode='r')
-
-    # Reshape the array to have rows of 70 floats (each row represents a centroid)
-    num_centroids = data.size // centroid_size
-    centroids = data[:num_centroids * centroid_size].reshape(num_centroids, centroid_size)
-
-    return centroids
+        return centroids
+  
 
 
 def write_file_records(file_path, data):
@@ -30,6 +54,8 @@ def write_file_records(file_path, data):
     # Write the packed data to the file in append mode
     with open(file_path, "ab") as fout:
         fout.write(binary_data)
+  
+
 
 def read_file_records(file_path):
     with open(file_path, "rb") as f:
@@ -41,6 +67,7 @@ def read_file_records(file_path):
 
     # Unpack the data
     records = []
+    print("read")
     for i in range(num_records):
         # Extract the binary chunk corresponding to one record (70 floats + 1 integer)
         record = binary_data[i*record_size:(i+1)*record_size]
@@ -49,6 +76,7 @@ def read_file_records(file_path):
         index = struct.unpack("i", record)[0]  # 1 integer
         
         records.append( index)
+        print(index)
 
     return records
 
@@ -69,5 +97,4 @@ def read_file_records_mmap(file_path):
         index = struct.unpack("i", record)[0]  # 1 integer
         
         records.append( index)
-
     return records
