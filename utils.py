@@ -7,17 +7,21 @@ ELEMENT_SIZE = np.dtype(np.float32).itemsize
       
 def write_file_centroids(file_path,centroids,offsets,sizes):
   
-    try:
+   
         with open(file_path, "ab") as fout:
             # Loop over each centroid and write its data along with the offset
             for i, centroid in enumerate(centroids):
-                
+                # if i>=2819:
+                #   print(i)
+                #   print(centroid)
+                #   print(sizes[i])
+                #   print(offsets[i])
+                 
                 # Pack the offset as a 4-byte integer and the centroid vector as 70 floats
-                if(sizes[i]!=0):
+              if(i not in sizes):
                   binary_data = struct.pack(f"q",offsets[i])+struct.pack(f"q", sizes[i])+struct.pack(f"{70}f" ,*centroid.flatten())
                   fout.write(binary_data)
-    except Exception as e:
-        print(f"An error occurred while writing centroids to the file: {e}")
+   
 import struct
 
           

@@ -182,6 +182,7 @@ class VecDB:
             offsets[label]=0    
             sizes[label]=0
         for label in tqdm.tqdm(unique_labels):
+           
             flag=False
             indices = np.where(labels == label)[0]
 
@@ -198,8 +199,12 @@ class VecDB:
                 if not flag:
                   offsets[label]=offset
                   flag=True
+              
             
             sizes[label]=size
+            if label==2820:
+              print(sizes[label])
+       
         
 
         write_file_centroids(self.file_path+"/centroids.bin",centroids,offsets,sizes)
