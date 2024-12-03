@@ -16,7 +16,7 @@ ELEMENT_SIZE = np.dtype(np.float32).itemsize
 DIMENSION = 70
 
 class VecDB:
-    def _init_(self, database_file_path = "saved_db.dat", index_file_path = "index.dat", new_db = True, db_size = None) -> None:
+    def __init__(self, database_file_path = "saved_db.dat", index_file_path = "index.dat", new_db = True, db_size = None) -> None:
         self.db_path = database_file_path
         self.index_path = index_file_path
         self.no_centroids=0
