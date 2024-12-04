@@ -118,6 +118,7 @@ class VecDB:
             results = []
             for centroid in top_centroids:
                   ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
+                #   ids=range(centroid[2]//(70*ELEMENT_SIZE),centroid[2]//(70*ELEMENT_SIZE)+centroid[3])
                   data = np.array(self.get_rows(centroid[2],centroid[3]))
                   # Compute cosine similarity for all vectors in the file
                   dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
@@ -194,7 +195,7 @@ class VecDB:
             
     def _get_top_centroids(self, query, k):
           # Find the nearest centroids to the query
-          centroids_data = read_file_centroids(self.file_path + "/centroids.bin")
+          centroids_data = read_file_centroids_with_memap(self.file_path + "/centroids.bin")
           # Initialize a heap to store the centroids and their scores
           heap = []
           
@@ -210,3 +211,7 @@ class VecDB:
           top_centroids = heapq.nlargest(k, heap)
           
           return top_centroids
+    
+
+
+

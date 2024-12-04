@@ -4,3 +4,9 @@
 ./clusters
 .__pycache__
 ./hash
+saved_db.dat
+#add Pycache
+__pycache__
+#add cluster
+clusters
+saved_db.dat

@@ -31,7 +31,30 @@ def read_file_centroids(file_path):
 
         return centroids
   
+       
+def read_file_centroids_with_memap(file_path):
+        
+            # Memory-map the file
+            mmap_data = np.memmap(file_path, dtype=np.uint8, mode='r')
+    
+            # Unpack the binary data: offset (int), size (int), centroid (70 floats)
+            centroids = []
+            idx = 0
 
+            # Precompute the struct formats
+            offset_format = struct.Struct("q")
+            size_format = struct.Struct("q")
+            centroid_format = struct.Struct(f"{70}f")
+            entry_size = offset_format.size + size_format.size + centroid_format.size
+
+            while idx < len(mmap_data):
+                offset = offset_format.unpack_from(mmap_data, idx)[0]
+                size = size_format.unpack_from(mmap_data, idx + offset_format.size)[0]
+                centroid = centroid_format.unpack_from(mmap_data, idx + offset_format.size + size_format.size)
+                centroids.append((offset, size, centroid))
+                idx += entry_size  # Move the index forward by the size of one entry
+            return centroids
+    
 
 def write_file_records(file_path, data):
     
