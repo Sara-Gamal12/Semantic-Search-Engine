@@ -154,7 +154,7 @@ class VecDB:
       
         self.no_centroids = int(np.sqrt(self._get_num_records()))
         if(self._get_num_records()==10**6):
-            self.no_centroids = 500
+            self.no_centroids = 300
 
        
         chuck_size = min(10**6,self._get_num_records())
