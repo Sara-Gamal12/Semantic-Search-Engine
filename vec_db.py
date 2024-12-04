@@ -117,8 +117,8 @@ class VecDB:
             # Initialize a list to store results
             results = []
             for centroid in top_centroids:
-                  ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
-                #   ids=range(centroid[2]//(70*ELEMENT_SIZE),centroid[2]//(70*ELEMENT_SIZE)+centroid[3])
+                #   ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
+                  ids=range(centroid[2]//(70*ELEMENT_SIZE),centroid[2]//(70*ELEMENT_SIZE)+centroid[3])
                   data = np.array(self.get_rows(centroid[2],centroid[3]))
                   # Compute cosine similarity for all vectors in the file
                   dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
@@ -200,16 +200,19 @@ class VecDB:
           heap = []
           
           # Iterate over the centroids data, which contains (offset, size, centroid)
-          for i,(offset, size, centroid) in enumerate(centroids_data):
-              # Calculate the score for the current centroid
-              score = self._cal_score(query, centroid)
-              
-              # Push the score, index, and the corresponding centroid metadata onto the heap
-              heapq.heappush(heap, (score,i, offset, size ))
-          
-          # Get the top k centroids by score (largest score first)
+          centroids = np.array([centroid for _, _, centroid in centroids_data])
+          scores = self._vectorized_cal_score(centroids, query.squeeze())
+          for i, (offset, size, _) in enumerate(centroids_data):
+              heapq.heappush(heap, (scores[i], i, offset, size))
+      
+        #   for i,(offset, size, centroid) in enumerate(centroids_data):
+        #     # Calculate the score for the current centroid
+        #     score = self._cal_score(query, centroid)
+            
+        #     # Push the score, index, and the corresponding centroid metadata onto the heap
+        #     heapq.heappush(heap, (score,i, offset, size ))
+              # Get the top k centroids by score (largest score first)
           top_centroids = heapq.nlargest(k, heap)
-          
           return top_centroids
     
 
