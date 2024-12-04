@@ -153,7 +153,7 @@ class VecDB:
     def _build_index(self):
       
         self.no_centroids = int(np.sqrt(self._get_num_records()))
-        if(self.self._get_num_records()==10**6):
+        if(self._get_num_records()==10**6):
             self.no_centroids = 300
 
        
