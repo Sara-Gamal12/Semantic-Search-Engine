@@ -1,5 +1,6 @@
 
 .venv
 .vscode
-.clusters
+./clusters
 .__pycache__
+./hash

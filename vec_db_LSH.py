@@ -66,9 +66,7 @@ class VecDB:
 
         # Calculate the dot product between each vector in vec1 and the broadcasted vec2
         dot_product = np.sum(vec1 * vec2_broadcasted, axis=1)
-        # Calculate the dot product between each vector in vec1 and vec2
-        # dot_product = np.dot(vec1, vec2.T)
-
+       
         # Calculate the norm of each vector in vec1
         norm_vec1 = np.linalg.norm(vec1, axis=1)
 
@@ -86,8 +84,7 @@ class VecDB:
         num_records = self._get_num_records()
         vectors = np.memmap(self.db_path, dtype=np.float32, mode='r', shape=(num_records, DIMENSION))
         return np.array(vectors)
-    def print_size(self,name, obj):
-                print(f"{name}: {sys.getsizeof(obj)} bytes")
+   
 
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
@@ -116,15 +113,6 @@ class VecDB:
             # Append scores and IDs to a list
             results.extend((score, vector_id) for score, vector_id in zip(scores, ids))
 
-            # Print sizes of key objects
-            # self.print_size("vectors", vectors)
-            # self.print_size("data", data)
-            # self.print_size("ids", ids)
-            # self.print_size("dot_products", dot_products)
-            # self.print_size("norms_data", norms_data)
-            # self.print_size("scores", scores)
-            # self.print_size("results", results)
-
             # Convert results to a list, sort, and slice
             results = list(results)
             results.sort(reverse=True, key=lambda x: x[0])
@@ -134,10 +122,6 @@ class VecDB:
             return top_k_ids
 
 
-
-
-
-           
     
     def _cal_score(self, vec1, vec2):
         dot_product = np.dot(vec1, vec2)
@@ -167,6 +151,5 @@ class VecDB:
             projections = np.dot(self.norm_random_vectors, norm_input_vector.squeeze())
             # Convert to binary hash: 1 if dot product > 0, else 0
             hash_value = ''.join(['1' if p > 0 else '0' for p in projections])
-            print(hash_value)
             write_file_records(self.file_path + "/" + str(hash_value) + ".bin", (point, i))
 

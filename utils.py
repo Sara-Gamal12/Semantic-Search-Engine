@@ -1,40 +1,25 @@
 import struct
 import numpy as np
 import os
+import struct
 ELEMENT_SIZE = np.dtype(np.float32).itemsize
 
-          # Assume data is a tuple (array_of_floats, index)
       
 def write_file_centroids(file_path,centroids,offsets,sizes):
   
-   
         with open(file_path, "ab") as fout:
             # Loop over each centroid and write its data along with the offset
             for i, centroid in enumerate(centroids):
-                # if i>=2819:
-                #   print(i)
-                #   print(centroid)
-                #   print(sizes[i])
-                #   print(offsets[i])
-                 
-                # Pack the offset as a 4-byte integer and the centroid vector as 70 floats
               if(i in sizes):
                   binary_data = struct.pack(f"q",offsets[i])+struct.pack(f"q", sizes[i])+struct.pack(f"{70}f" ,*centroid.flatten())
                   fout.write(binary_data)
-              else:
-                  print(i)
-   
-import struct
-
-          
+            
+         
 def read_file_centroids(file_path):
   
         with open(file_path, "rb") as f:
             binary_data = f.read()
         
-        # Each centroid includes an offset (4 bytes), size (4 bytes), and 70 floats (4 bytes each).
-        
-        # Unpack the binary data: offset (int), size (int), centroid (70 floats)
         centroids = []
         idx = 0
         while idx < len(binary_data):
@@ -57,29 +42,6 @@ def write_file_records(file_path, data):
         fout.write(binary_data)
   
 
-
-def read_file_records(file_path):
-    with open(file_path, "rb") as f:
-        binary_data = f.read()
-
-    # Calculate the number of records (each record is 70 floats + 1 integer index)
-    record_size =  4 
-    num_records = len(binary_data) // record_size
-
-    # Unpack the data
-    records = []
-    print("read")
-    for i in range(num_records):
-        # Extract the binary chunk corresponding to one record (70 floats + 1 integer)
-        record = binary_data[i*record_size:(i+1)*record_size]
-        
-        # Unpack the 70 floats and the integer index
-        index = struct.unpack("i", record)[0]  # 1 integer
-        
-        records.append( index)
-        print(index)
-
-    return records
 
 def read_file_records_mmap(file_path):
    
