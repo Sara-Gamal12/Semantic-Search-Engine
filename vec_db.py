@@ -153,6 +153,9 @@ class VecDB:
     def _build_index(self):
       
         self.no_centroids = int(np.sqrt(self._get_num_records()))
+        if(self.self._get_num_records()==10**6):
+            self.no_centroids = 300
+
        
         chuck_size = min(10**6,self._get_num_records())
         training_data=self.get_all_rows()[0:chuck_size]   
