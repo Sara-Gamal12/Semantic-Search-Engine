@@ -88,9 +88,9 @@ class VecDB:
         vec2_broadcasted = np.broadcast_to(vec2, vec1.shape)
 
         # Calculate the dot product between each vector in vec1 and the broadcasted vec2
-        dot_product = np.sum(vec1 * vec2_broadcasted, axis=1)
+        # dot_product = np.sum(vec1 * vec2_broadcasted, axis=1)
         # Calculate the dot product between each vector in vec1 and vec2
-        # dot_product = np.dot(vec1, vec2.T)
+        dot_product = np.dot(vec1, vec2.T)
 
         # Calculate the norm of each vector in vec1
         norm_vec1 = np.linalg.norm(vec1, axis=1)
