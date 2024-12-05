@@ -72,15 +72,29 @@ class VecDB:
         except Exception as e:
             return f"An error occurred: {e}"
         
-    def get_rows(self, off,size) -> np.ndarray:
+   
+    def get_rows(self, ids) -> np.ndarray:
         # Get the vectors belonging to a certain cluster
+        vectors = []
         try:
-            mmap_vector = np.memmap(self.db_path, dtype=np.float32, mode='r', shape=(size, DIMENSION), offset=off)
-            return np.array(mmap_vector)
+            # Open the file in read mode
+            with open(self.db_path, "rb") as file:
+                for id in ids:
+                    
+                    # Calculate the byte offset for the vector corresponding to 'id'
+                    file.seek(id * DIMENSION * ELEMENT_SIZE)
+                    
+                    # Read the vector's binary data and unpack it into a tuple of floats
+                    data = file.read(DIMENSION * ELEMENT_SIZE)
+                    
+                    # Unpack the data into a tuple of 70 floats
+                    vector = struct.unpack(f"{DIMENSION}f", data)
+                    vectors.append(vector)
+                
         except Exception as e:
-            return f"An error occurred: {e}"
-    
-
+            print(f"Error while reading vectors: {e}")
+        
+        return np.array(vectors)
 
     def _vectorized_cal_score(self, vec1, vec2):
         vec2_broadcasted = np.broadcast_to(vec2, vec1.shape)
@@ -117,9 +131,9 @@ class VecDB:
             # Initialize a list to store results
             results = []
             for centroid in top_centroids:
-                #   ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
-                  ids=range(centroid[2]//(70*ELEMENT_SIZE),centroid[2]//(70*ELEMENT_SIZE)+centroid[3])
-                  data = np.array(self.get_rows(centroid[2],centroid[3]))
+                  ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
+                  # ids=range(centroid[2]//(70*ELEMENT_SIZE),centroid[2]//(70*ELEMENT_SIZE)+centroid[3])
+                  data = np.array(self.get_rows(ids))
                   # Compute cosine similarity for all vectors in the file
                   dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
                   norms_data = np.linalg.norm(data, axis=1)  # Norms of the data vectors
@@ -163,32 +177,32 @@ class VecDB:
        
         all_rows=self.get_all_rows()
         unique_labels = np.unique(labels)
-        offsets={}
-        sizes={}
-        sorted=[]
-        max_label=max(kmeans.labels_)
-        for label in range(max_label+1):
-            offsets[label]=0    
-            sizes[label]=0
+        # offsets={}
+        # sizes={}
+        # sorted=[]
+        # max_label=max(kmeans.labels_)
+        # for label in range(max_label+1):
+        #     offsets[label]=0    
+        #     sizes[label]=0
 
         for label in tqdm.tqdm(unique_labels):
             flag=False
             indices = np.where(labels == label)[0]
-            size=0
+            # size=0
             for index in (indices):
-                size+=1
+                # size+=1
                 write_file_records(self.file_path + "/" + str(label) + ".bin",  index)
-                offset=DIMENSION*ELEMENT_SIZE*len(sorted)
-                sorted.append(all_rows[index])
-                if not flag:
-                  offsets[label]=offset
-                  flag=True
+                # offset=DIMENSION*ELEMENT_SIZE*len(sorted)
+                # sorted.append(all_rows[index])
+                # if not flag:
+                #   offsets[label]=offset
+                #   flag=True
               
-            sizes[label]=size
+            # sizes[label]=size
            
        
-        write_file_centroids(self.file_path+"/centroids.bin",centroids,offsets,sizes)
-        self._write_vectors_to_file(np.array(sorted))
+        write_file_centroids(self.file_path+"/centroids.bin",centroids)
+        # self._write_vectors_to_file(np.array(sorted))
           
 
 
@@ -200,10 +214,10 @@ class VecDB:
           heap = []
           
           # Iterate over the centroids data, which contains (offset, size, centroid)
-          centroids = np.array([centroid for _, _, centroid in centroids_data])
+          centroids = np.array([centroid for centroid in centroids_data])
           scores = self._vectorized_cal_score(centroids, query.squeeze())
-          for i, (offset, size, _) in enumerate(centroids_data):
-              heapq.heappush(heap, (scores[i], i, offset, size))
+          for i, ( _) in enumerate(centroids_data):
+              heapq.heappush(heap, (scores[i], i))
       
         #   for i,(offset, size, centroid) in enumerate(centroids_data):
         #     # Calculate the score for the current centroid
