@@ -20,7 +20,6 @@ class VecDB:
         self.db_path = database_file_path
         self.index_path = index_file_path
         self.no_centroids=0
-        self.file_path="./clusters"
 
         if new_db:
             if db_size is None:
@@ -29,15 +28,7 @@ class VecDB:
             if os.path.exists(self.db_path):
                 os.remove(self.db_path)
             self.generate_database(db_size)
-        if self._get_num_records()==10**6:
-           self.file_path="./clusters1"
-        if self._get_num_records()==10*10**6:
-           self.file_path="./clusters2"
-        if self._get_num_records()==15*10**6:
-           self.file_path="./clusters3"
-        if self._get_num_records()==20*10**6:
-           self.file_path="./clusters4"
-
+     
     
     def generate_database(self, size: int) -> None:
         rng = np.random.default_rng(DB_SEED_NUMBER)
@@ -128,7 +119,7 @@ class VecDB:
             # Initialize a list to store results
             results = []
             for centroid in top_centroids:
-                  ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
+                  ids = read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin")
                   data = np.array(self.get_rows(ids))
                   # Compute cosine similarity for all vectors in the file
                   dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
@@ -157,8 +148,8 @@ class VecDB:
         if(self._get_num_records()==10**6):
             self.no_centroids = 300
 
-        chuck_size = min(10**7,self._get_num_records())
-        training_data=self.get_all_rows()[0:chuck_size]   
+        # chuck_size = min(10**8,self._get_num_records())
+        training_data=self.get_all_rows()  
         kmeans = MiniBatchKMeans(n_clusters=self.no_centroids, random_state=0, batch_size=10**4,n_init=3)
 
         # Fit the model
@@ -167,24 +158,24 @@ class VecDB:
         labels=kmeans.predict(self.get_all_rows())
         centroids= kmeans.cluster_centers_
         #save centroids in file
-        if os.path.exists(self.file_path):
-            shutil.rmtree(self.file_path)
-        os.makedirs(self.file_path, exist_ok=True)
+        if os.path.exists(self.index_path):
+            shutil.rmtree(self.index_path)
+        os.makedirs(self.index_path, exist_ok=True)
        
         unique_labels = np.unique(labels)
       
         for label in tqdm.tqdm(unique_labels):
             indices = np.where(labels == label)[0]
             for index in (indices):
-                write_file_records(self.file_path + "/" + str(label) + ".bin",  index)       
-        write_file_centroids(self.file_path+"/centroids.bin",centroids)
+                write_file_records(self.index_path + "/" + str(label) + ".bin",  index)       
+        write_file_centroids(self.index_path+"/centroids.bin",centroids)
           
 
 
             
     def _get_top_centroids(self, query, k):
           # Find the nearest centroids to the query
-          centroids_data = read_file_centroids_with_memap(self.file_path + "/centroids.bin")
+          centroids_data = read_file_centroids_with_memap(self.index_path + "/centroids.bin")
           # Initialize a heap to store the centroids and their scores
           heap = []
           
