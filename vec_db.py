@@ -79,18 +79,15 @@ class VecDB:
         try:
             # Open the file in read mode
             with open(self.db_path, "rb") as file:
-                for id in ids:
-                    
+                # Preallocate a numpy array for the vectors
+                vectors = np.empty((len(ids), DIMENSION), dtype=np.float32)
+                
+                for i, id in enumerate(ids):
                     # Calculate the byte offset for the vector corresponding to 'id'
                     file.seek(id * DIMENSION * ELEMENT_SIZE)
                     
-                    # Read the vector's binary data and unpack it into a tuple of floats
-                    data = file.read(DIMENSION * ELEMENT_SIZE)
-                    
-                    # Unpack the data into a tuple of 70 floats
-                    vector = struct.unpack(f"{DIMENSION}f", data)
-                    vectors.append(vector)
-                
+                    # Read the vector's binary data directly into the numpy array
+                    vectors[i] = np.frombuffer(file.read(DIMENSION * ELEMENT_SIZE), dtype=np.float32)
         except Exception as e:
             print(f"Error while reading vectors: {e}")
         
@@ -132,7 +129,6 @@ class VecDB:
             results = []
             for centroid in top_centroids:
                   ids = read_file_records_mmap(self.file_path + "/" + str(centroid[1]) + ".bin")
-                  # ids=range(centroid[2]//(70*ELEMENT_SIZE),centroid[2]//(70*ELEMENT_SIZE)+centroid[3])
                   data = np.array(self.get_rows(ids))
                   # Compute cosine similarity for all vectors in the file
                   dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
@@ -161,7 +157,7 @@ class VecDB:
         if(self._get_num_records()==10**6):
             self.no_centroids = 300
 
-        chuck_size = min(10**6,self._get_num_records())
+        chuck_size = min(10**7,self._get_num_records())
         training_data=self.get_all_rows()[0:chuck_size]   
         kmeans = MiniBatchKMeans(n_clusters=self.no_centroids, random_state=0, batch_size=10**4,n_init=3)
 
@@ -175,34 +171,13 @@ class VecDB:
             shutil.rmtree(self.file_path)
         os.makedirs(self.file_path, exist_ok=True)
        
-        all_rows=self.get_all_rows()
         unique_labels = np.unique(labels)
-        # offsets={}
-        # sizes={}
-        # sorted=[]
-        # max_label=max(kmeans.labels_)
-        # for label in range(max_label+1):
-        #     offsets[label]=0    
-        #     sizes[label]=0
-
+      
         for label in tqdm.tqdm(unique_labels):
-            flag=False
             indices = np.where(labels == label)[0]
-            # size=0
             for index in (indices):
-                # size+=1
-                write_file_records(self.file_path + "/" + str(label) + ".bin",  index)
-                # offset=DIMENSION*ELEMENT_SIZE*len(sorted)
-                # sorted.append(all_rows[index])
-                # if not flag:
-                #   offsets[label]=offset
-                #   flag=True
-              
-            # sizes[label]=size
-           
-       
+                write_file_records(self.file_path + "/" + str(label) + ".bin",  index)       
         write_file_centroids(self.file_path+"/centroids.bin",centroids)
-        # self._write_vectors_to_file(np.array(sorted))
           
 
 
@@ -216,16 +191,7 @@ class VecDB:
           # Iterate over the centroids data, which contains (offset, size, centroid)
           centroids = np.array([centroid for centroid in centroids_data])
           scores = self._vectorized_cal_score(centroids, query.squeeze())
-          for i, ( _) in enumerate(centroids_data):
-              heapq.heappush(heap, (scores[i], i))
-      
-        #   for i,(offset, size, centroid) in enumerate(centroids_data):
-        #     # Calculate the score for the current centroid
-        #     score = self._cal_score(query, centroid)
-            
-        #     # Push the score, index, and the corresponding centroid metadata onto the heap
-        #     heapq.heappush(heap, (score,i, offset, size ))
-              # Get the top k centroids by score (largest score first)
+          heap = list(zip(scores, range(len(centroids_data))))
           top_centroids = heapq.nlargest(k, heap)
           return top_centroids
     
