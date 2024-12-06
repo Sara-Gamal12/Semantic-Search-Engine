@@ -151,7 +151,7 @@ class VecDB:
         # chuck_size = min(10**8,self._get_num_records())
         training_data=self.get_all_rows()  
 
-        kmeans = MiniBatchKMeans(n_clusters=self.no_centroids, random_state=0 , n_init = 3,batch_size=10**4 )
+        kmeans = MiniBatchKMeans(n_clusters=self.no_centroids, random_state=0 , n_init = 3,batch_size=10**3 )
 
         # Fit the model
         kmeans.fit(training_data)
