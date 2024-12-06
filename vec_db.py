@@ -65,24 +65,47 @@ class VecDB:
         
    
     def get_rows(self, ids) -> np.ndarray:
-        # Get the vectors belonging to a certain cluster
-        vectors = []
+      
         try:
-            # Open the file in read mode
+            # Sort the IDs for efficient processing
+            vectors = np.empty((len(ids), DIMENSION), dtype=np.float32)
+
             with open(self.db_path, "rb") as file:
-                # Preallocate a numpy array for the vectors
-                vectors = np.empty((len(ids), DIMENSION), dtype=np.float32)
+                # Group IDs into continuous ranges
+                ranges = []
+                start = ids[0]
+                prev = ids[0]
+
+                for id in ids[1:]:
+                    if id == prev + 1:  # Extend the current range
+                        prev = id
+                    else:  # Start a new range
+                        ranges.append((start, prev))
+                        start = id
+                        prev = id
+                ranges.append((start, prev))  # Add the last range
+
+                # Read each range in a single I/O operation
+                vector_idx = 0
+                for start, end in ranges:
+                    range_size = end - start + 1
+                    offset = start * DIMENSION * ELEMENT_SIZE
+                    file.seek(offset)
+
+                    # Read the entire block of vectors for this range
+                    block_data = file.read(range_size * DIMENSION * ELEMENT_SIZE)
+                    block_vectors = np.frombuffer(block_data, dtype=np.float32).reshape(-1, DIMENSION)
+
+                    # Assign the block vectors to the appropriate locations in the output array
+                    for i in range(range_size):
+                        vectors[vector_idx] = block_vectors[i]
+                        vector_idx += 1
                 
-                for i, id in enumerate(ids):
-                    # Calculate the byte offset for the vector corresponding to 'id'
-                    file.seek(id * DIMENSION * ELEMENT_SIZE)
-                    
-                    # Read the vector's binary data directly into the numpy array
-                    vectors[i] = np.frombuffer(file.read(DIMENSION * ELEMENT_SIZE), dtype=np.float32)
+
         except Exception as e:
             print(f"Error while reading vectors: {e}")
-        
-        return np.array(vectors)
+            return np.empty((0, DIMENSION), dtype=np.float32)  # Return an empty array on error
+        return vectors
 
     def _vectorized_cal_score(self, vec1, vec2):
         vec2_broadcasted = np.broadcast_to(vec2, vec1.shape)
@@ -114,7 +137,7 @@ class VecDB:
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
 
-            n_probs =10
+            n_probs =1
             top_centroids = self._get_top_centroids(query, n_probs)
             # Initialize a list to store results
             results = []
@@ -144,9 +167,8 @@ class VecDB:
 
     def _build_index(self):
       
-        self.no_centroids = int(np.sqrt(self._get_num_records()))
-        if(self._get_num_records()==10**6):
-            self.no_centroids = 300
+        self.no_centroids = int(np.sqrt(self._get_num_records()))*2
+        
 
         # chuck_size = min(10**8,self._get_num_records())
         training_data=self.get_all_rows()  
