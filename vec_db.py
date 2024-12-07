@@ -154,9 +154,10 @@ class VecDB:
                   scores = dot_products / (norms_data * norm_query)  # Cosine similarity for all
                   # Append scores and IDs to a list
                   results.extend(zip(scores, ids))
-                  results.sort( key=lambda x:- x[0])
-                  results = results[:top_k]
+                #   results.sort( key=lambda x:- x[0])
+                #   results = results[:top_k]
 
+            results = heapq.nlargest(top_k, results)
             top_k_ids = [result[1] for result in results]
             return top_k_ids
 
