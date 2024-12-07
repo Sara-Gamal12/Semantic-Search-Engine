@@ -136,30 +136,32 @@ class VecDB:
     
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
+        n_probs = 5
+        if self._get_num_records() <= 10 * 10**6:
+            n_probs = 8
 
-            n_probs =5
-            if(self._get_num_records()<=10*10**6):
-                n_probs =8
+        top_centroids = self._get_top_centroids(query, n_probs)
+        results = []
 
-            top_centroids = self._get_top_centroids(query, n_probs)
-            # Initialize a list to store results
-            results = []
-            for centroid in top_centroids:
-                  ids = read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin")
-                  data = np.array(self.get_rows(ids))
-                  # Compute cosine similarity for all vectors in the file
-                  dot_products = np.dot(data, query.squeeze())  # Vectorized dot product
-                  norms_data = np.linalg.norm(data, axis=1)  # Norms of the data vectors
-                  norm_query = np.linalg.norm(query)  # Norm of the query vector
-                  scores = dot_products / (norms_data * norm_query)  # Cosine similarity for all
-                  # Append scores and IDs to a list
-                  results.extend(zip(scores, ids))
-                #   results.sort( key=lambda x:- x[0])
-                #   results = results[:top_k]
+        query_norm = np.linalg.norm(query)
+        query_squeezed = query.squeeze()
 
-            results = heapq.nlargest(top_k, results)
-            top_k_ids = [result[1] for result in results]
-            return top_k_ids
+        for centroid in top_centroids:
+            ids = read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin")
+            data = np.array(self.get_rows(ids))
+
+            dot_products = np.dot(data, query_squeezed)
+            norms_data = np.linalg.norm(data, axis=1)
+            scores = dot_products / (norms_data * query_norm)
+
+            for score, id in zip(scores, ids):
+                heapq.heappush(results, (score, id))
+                if len(results) > top_k:
+                    heapq.heappop(results)
+
+        # results = heapq.nlargest(top_k, results)
+        top_k_ids = [result[1] for result in results]
+        return top_k_ids
 
     
     def _cal_score(self, vec1, vec2):
