@@ -137,7 +137,7 @@ class VecDB:
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
 
-            n_probs =1
+            n_probs =3
             top_centroids = self._get_top_centroids(query, n_probs)
             # Initialize a list to store results
             results = []
