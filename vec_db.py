@@ -130,7 +130,7 @@ class VecDB:
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
         n_probs = 5
-        if self._get_num_records() <= 10**6:
+        if self._get_num_records() <= 10*10**6:
             n_probs = 12
         elif self._get_num_records() == 15 * 10**6:
             n_probs = 10
