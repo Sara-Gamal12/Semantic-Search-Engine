@@ -130,8 +130,11 @@ class VecDB:
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
         n_probs = 5
-        if self._get_num_records() <= 15 * 10**6:
+        if self._get_num_records() <= 10**6:
+            n_probs = 12
+        elif self._get_num_records() == 15 * 10**6:
             n_probs = 10
+        
 
         top_centroids = self._get_top_centroids(query, n_probs)
         results = []
@@ -151,13 +154,14 @@ class VecDB:
         norms_data = np.linalg.norm(data, axis=1)
         del data
         scores = dot_products / (norms_data * query_norm)
-        for score, id in zip(scores, ids):
-            heapq.heappush(results, (score, id))
-            if len(results) > top_k:
-                heapq.heappop(results)
-        # results = heapq.nlargest(top_k, results)
-        top_k_ids = [result[1] for result in results]
-        return top_k_ids
+        results = list(zip(scores, ids))
+        # for score, id in zip(scores, ids):
+        #     heapq.heappush(results, (score, id))
+        #     if len(results) > top_k:
+        #         heapq.heappop(results)
+        results = heapq.nlargest(top_k, results)
+        results = [result[1] for result in results]
+        return results
 
     
     def _cal_score(self, vec1, vec2):
