@@ -128,8 +128,8 @@ class VecDB:
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
         n_probs = 5
-        if self._get_num_records() <= 10 * 10**6:
-            n_probs = 8
+        if self._get_num_records() <= 15 * 10**6:
+            n_probs = 10
 
         top_centroids = self._get_top_centroids(query, n_probs)
         results = []
@@ -140,8 +140,7 @@ class VecDB:
         for centroid in top_centroids:
             #insert item to flatten list
             ids.append(read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin"))
-        # print(ids)
-        #flatten the list
+        
         ids=list(chain.from_iterable(ids))
         # ids =ids.flatten()
         data = np.array(self.get_rows(np.array(ids)))
