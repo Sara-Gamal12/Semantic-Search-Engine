@@ -65,17 +65,14 @@ class VecDB:
         
    
     def get_rows(self, ids) -> np.ndarray:
-      
         try:
             # Sort the IDs for efficient processing
             vectors = np.empty((len(ids), DIMENSION), dtype=np.float32)
-
             with open(self.db_path, "rb") as file:
                 # Group IDs into continuous ranges
                 ranges = []
                 start = ids[0]
                 prev = ids[0]
-
                 for id in ids[1:]:
                     if id == prev + 1:  # Extend the current range
                         prev = id
@@ -84,24 +81,19 @@ class VecDB:
                         start = id
                         prev = id
                 ranges.append((start, prev))  # Add the last range
-
                 # Read each range in a single I/O operation
                 vector_idx = 0
                 for start, end in ranges:
                     range_size = end - start + 1
                     offset = start * DIMENSION * ELEMENT_SIZE
                     file.seek(offset)
-
                     # Read the entire block of vectors for this range
                     block_data = file.read(range_size * DIMENSION * ELEMENT_SIZE)
                     block_vectors = np.frombuffer(block_data, dtype=np.float32).reshape(-1, DIMENSION)
-
                     # Assign the block vectors to the appropriate locations in the output array
                     for i in range(range_size):
                         vectors[vector_idx] = block_vectors[i]
-                        vector_idx += 1
-                
-
+                        vector_idx += 1                
         except Exception as e:
             print(f"Error while reading vectors: {e}")
             return np.empty((0, DIMENSION), dtype=np.float32)  # Return an empty array on error
@@ -145,20 +137,17 @@ class VecDB:
 
         query_norm = np.linalg.norm(query)
         query_squeezed = query.squeeze()
-
+        ids=[]
         for centroid in top_centroids:
-            ids = read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin")
-            data = np.array(self.get_rows(ids))
-
-            dot_products = np.dot(data, query_squeezed)
-            norms_data = np.linalg.norm(data, axis=1)
-            scores = dot_products / (norms_data * query_norm)
-
-            for score, id in zip(scores, ids):
-                heapq.heappush(results, (score, id))
-                if len(results) > top_k:
-                    heapq.heappop(results)
-
+            ids.append(read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin"))
+        data = np.array(self.get_rows(ids))
+        dot_products = np.dot(data, query_squeezed)
+        norms_data = np.linalg.norm(data, axis=1)
+        scores = dot_products / (norms_data * query_norm)
+        for score, id in zip(scores, ids):
+            heapq.heappush(results, (score, id))
+            if len(results) > top_k:
+                heapq.heappop(results)
         # results = heapq.nlargest(top_k, results)
         top_k_ids = [result[1] for result in results]
         return top_k_ids
@@ -178,13 +167,10 @@ class VecDB:
             self.no_centroids = int(np.sqrt(self._get_num_records()))*5
         if(self._get_num_records()==20*10**6):
             self.no_centroids = int(np.sqrt(self._get_num_records()))*6
-        
-
+    
         # chuck_size = min(10**8,self._get_num_records())
         training_data=self.get_all_rows()  
-
         kmeans = MiniBatchKMeans(n_clusters=self.no_centroids, random_state=0 , n_init = 3,batch_size=10**4 )
-
         # Fit the model
         kmeans.fit(training_data)
         
@@ -219,6 +205,3 @@ class VecDB:
           top_centroids = heapq.nlargest(k, heap)
           return top_centroids
     
-
-
-
