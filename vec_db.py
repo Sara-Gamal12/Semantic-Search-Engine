@@ -10,7 +10,7 @@ import shutil
 import sys
 from sklearn.cluster import MiniBatchKMeans
 
-
+from itertools import chain
 DB_SEED_NUMBER = 42
 ELEMENT_SIZE = np.dtype(np.float32).itemsize
 DIMENSION = 70
@@ -100,7 +100,6 @@ class VecDB:
         return vectors
 
     def _vectorized_cal_score(self, vec1, vec2):
-        vec2_broadcasted = np.broadcast_to(vec2, vec1.shape)
 
         # Calculate the dot product between each vector in vec1 and the broadcasted vec2
         # dot_product = np.sum(vec1 * vec2_broadcasted, axis=1)
@@ -139,8 +138,13 @@ class VecDB:
         query_squeezed = query.squeeze()
         ids=[]
         for centroid in top_centroids:
+            #insert item to flatten list
             ids.append(read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin"))
-        data = np.array(self.get_rows(ids))
+        # print(ids)
+        #flatten the list
+        ids=list(chain.from_iterable(ids))
+        # ids =ids.flatten()
+        data = np.array(self.get_rows(np.array(ids)))
         dot_products = np.dot(data, query_squeezed)
         norms_data = np.linalg.norm(data, axis=1)
         scores = dot_products / (norms_data * query_norm)
