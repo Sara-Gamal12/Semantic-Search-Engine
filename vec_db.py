@@ -65,6 +65,32 @@ class VecDB:
         
    
     def get_rows(self, ids) -> np.ndarray:
+        """
+        Retrieves rows of vectors from a binary file based on given IDs.
+
+        This method reads vectors from a binary file specified by `self.db_path`.
+        The vectors are identified by their IDs, which are provided as a list.
+        The method optimizes file I/O by grouping continuous ID ranges and reading
+        them in a single operation.
+
+        Args:
+            ids (list of int): A list of integer IDs representing the rows to be retrieved.
+
+        Returns:
+            np.ndarray: A 2D numpy array of shape (len(ids), DIMENSION) containing the vectors.
+                        If an error occurs, an empty array of shape (0, DIMENSION) is returned.
+
+        Raises:
+            Exception: If there is an error while reading the vectors from the file.
+
+        Optimization:
+            - The IDs are sorted and grouped into continuous ranges to minimize the number of
+              file seek and read operations.
+            - Each range is read in a single I/O operation, reducing the overhead of multiple
+              small reads.
+            - The method uses numpy's `frombuffer` to efficiently convert the binary data into
+              a numpy array, which is then reshaped and assigned to the output array.
+        """
         try:
             # Sort the IDs for efficient processing
             vectors = np.empty((len(ids), DIMENSION), dtype=np.float32)
@@ -129,11 +155,11 @@ class VecDB:
     
     
     def retrieve(self, query: Annotated[np.ndarray, (1, DIMENSION)], top_k = 5):
-        n_probs = 5
-        if self._get_num_records() <= 10*10**6:
-            n_probs = 12
-        elif self._get_num_records() == 15 * 10**6:
-            n_probs = 10
+        n_probs = 15
+        # if self._get_num_records() <= 10*10**6:
+        #     n_probs = 12
+        # elif self._get_num_records() == 15 * 10**6:
+        #     n_probs = 10
         
 
         top_centroids = self._get_top_centroids(query, n_probs)
@@ -159,7 +185,7 @@ class VecDB:
         #     heapq.heappush(results, (score, id))
         #     if len(results) > top_k:
         #         heapq.heappop(results)
-        results = heapq.nlargest(top_k, results)
+        results = heapq.nlargest(top_k, results, key=lambda x: x[0])
         results = [result[1] for result in results]
         return results
 
