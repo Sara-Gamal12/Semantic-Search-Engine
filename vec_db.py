@@ -93,7 +93,9 @@ class VecDB:
                     # Assign the block vectors to the appropriate locations in the output array
                     for i in range(range_size):
                         vectors[vector_idx] = block_vectors[i]
-                        vector_idx += 1                
+                        vector_idx += 1 
+                    del block_data, block_vectors
+                del ranges               
         except Exception as e:
             print(f"Error while reading vectors: {e}")
             return np.empty((0, DIMENSION), dtype=np.float32)  # Return an empty array on error
@@ -140,12 +142,14 @@ class VecDB:
         for centroid in top_centroids:
             #insert item to flatten list
             ids.append(read_file_records_mmap(self.index_path + "/" + str(centroid[1]) + ".bin"))
-        
+        del top_centroids
         ids=list(chain.from_iterable(ids))
         # ids =ids.flatten()
         data = np.array(self.get_rows(np.array(ids)))
+         
         dot_products = np.dot(data, query_squeezed)
         norms_data = np.linalg.norm(data, axis=1)
+        del data
         scores = dot_products / (norms_data * query_norm)
         for score, id in zip(scores, ids):
             heapq.heappush(results, (score, id))
